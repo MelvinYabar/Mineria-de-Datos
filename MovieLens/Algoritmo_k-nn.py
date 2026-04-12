@@ -4,8 +4,8 @@ import math
 # ─────────────────────────────────────────
 # 1. CARGAR DATOS
 # ─────────────────────────────────────────
-ratings = pd.read_csv('ratings.csv')   # userId, movieId, rating, timestamp
-movies = pd.read_csv('movies.csv')
+ratings = pd.read_csv('data/ratings.csv')   # userId, movieId, rating, timestamp
+movies = pd.read_csv('data/movies.csv')
 full_data = pd.merge(ratings, movies, on='movieId')
 
 # Construir matriz usuario × película (sin librerías externas para el cálculo)

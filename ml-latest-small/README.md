@@ -1,4 +1,4 @@
-## 🎯 Objetivos del Proyecto (según pizarra)
+## 🎯 Objetivos del Proyecto
 
 - **Similitud**: Calcular qué tan parecidos son dos usuarios (coseno, Manhattan, Euclidiana, Pearson).
 - **Algoritmo k-nn**: Encontrar los K vecinos más cercanos.
@@ -27,22 +27,6 @@
 - Sección **Influencia (T2)** con el Influencer del usuario.
 - Explicación de **complejidad (T3)**.
 
-## 📌 Explicación según la pizarra
-(Ver sección abajo en este README)
-
-**Referencias:**  
-- Diapositivas de clase (pizarra)  
-- PDF “Sistemas de Recomendación”  
-- MovieLens: https://grouplens.org/datasets/movielens/
-EOF
-
-# 2. Reemplazar el código con la versión final (mejorada)
-cd ml-latest-small
-cat > Algoritmo_k-nn.py << 'EOF'
-import pandas as pd
-import math
-import time
-
 # ─────────────────────────────────────────
 # 1. CARGAR DATOS
 # ─────────────────────────────────────────
@@ -58,7 +42,7 @@ for user_id, row in rating_matrix.iterrows():
 print(f"Usuarios cargados: {len(user_ratings)}")
 
 # ─────────────────────────────────────────
-# 2. SIMILITUD COSENO (NO SE MODIFICA - como en la pizarra)
+# 2. SIMILITUD COSENO (NO SE MODIFICA)
 # ─────────────────────────────────────────
 def cosine_similarity(ratings_u: dict, ratings_v: dict) -> float:
     common = set(ratings_u.keys()) & set(ratings_v.keys())
@@ -83,7 +67,7 @@ def insertion_sort_desc(pairs: list) -> list:
     return pairs
 
 # ─────────────────────────────────────────
-# 4. K-NN (EXACTO como en el pizarrón - NO SE MODIFICA)
+# 4. K-NN 
 # ─────────────────────────────────────────
 def knn_users(target_user_id: int, k: int = 10) -> list:
     if target_user_id not in user_ratings:
@@ -99,7 +83,7 @@ def knn_users(target_user_id: int, k: int = 10) -> list:
     return similarities[:k]
 
 # ─────────────────────────────────────────
-# 5. PREDICCIÓN Y RECOMENDACIONES (T1 del pizarrón)
+# 5. PREDICCIÓN Y RECOMENDACIONES (T1)
 # ─────────────────────────────────────────
 def predict_rating(target_user_id: int, movie_id: int, k: int = 10) -> float:
     vecinos = knn_users(target_user_id, k)
@@ -127,7 +111,7 @@ def get_recommendations(target_user_id: int, k: int = 10, threshold: float = 3.0
     return recs[:top_n]
 
 # ─────────────────────────────────────────
-# 6. INFLUENCIA (T2 y T3 del pizarrón - NUEVA SECCIÓN)
+# 6. INFLUENCIA (T2 y T3)
 # ─────────────────────────────────────────
 def mostrar_influencia(target_user_id: int, k: int = 10):
     print("\n" + "="*70)
@@ -195,7 +179,7 @@ if __name__ == "__main__":
     print(f"\nTiempo total de ejecución: {time.time()-start:.2f} segundos")
 EOF
 
-### 2. Explicación del Código (responde a **cada punto de la pizarra**)
+### 2. Explicación del Código
 
 **Similitud**  
 → Usamos **similitud coseno** (la que aparece dibujada con los vectores U1, U2, U3 y el ángulo θ).  

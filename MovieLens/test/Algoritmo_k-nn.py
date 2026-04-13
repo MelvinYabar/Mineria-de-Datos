@@ -1,7 +1,7 @@
 import pandas as pd
 import math
 import time
-from influencer import crear_usuarios_batch, crear_influencer, analizar_influencer, medir_knn
+from MovieLens.test.influencer import crear_usuarios_batch, crear_influencer, analizar_influencer, medir_knn
 # ─────────────────────────────────────────
 # 1. CARGAR DATOS
 # ─────────────────────────────────────────

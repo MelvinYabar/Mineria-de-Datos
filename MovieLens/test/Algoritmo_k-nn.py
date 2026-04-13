@@ -1,6 +1,7 @@
 import pandas as pd
 import math
-
+import time
+from influencer import crear_usuarios_batch, crear_influencer, analizar_influencer, medir_knn
 # ─────────────────────────────────────────
 # 1. CARGAR DATOS
 # ─────────────────────────────────────────
@@ -117,9 +118,10 @@ def knn_users(target_user_id: int, k: int = 10) -> list:
 if __name__ == "__main__":
     TARGET_USER = 1    # ← cambia este ID
     K = 10
-
+    start = time.time()
     vecinos = knn_users(target_user_id=TARGET_USER, k=K)
-
+    end = time.time()
+    print(f"Tiempo de ejecución: {end - start:.4f} segundos")
     target_movies = set(user_ratings[TARGET_USER].keys())
 
     print("=" * 55)
@@ -137,3 +139,15 @@ if __name__ == "__main__":
     print(f"  Vecino más lejano  : Usuario {vecinos[-1][0]}  (sim={vecinos[-1][1]:.4f})")
     print("=" * 55)
     
+
+    print("\nPARTE 3: INFLUENCERS Y RECOMENDACIONES...")
+
+        # 1. Crear usuarios nuevos
+    crear_usuarios_batch(cantidad=5, ratings_por_usuario=30)
+
+    # 2. Crear y analizar influencer
+    crear_influencer(user_id=9999)
+    analizar_influencer(influencer_id=9999, muestra=50)
+
+    # 3.5 Métricas de computación
+    medir_knn(target_user_id=1, k=10)

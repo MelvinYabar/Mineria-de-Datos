@@ -1,10 +1,11 @@
 import pandas as pd
 import math
+from influencer import crear_usuarios_batch, crear_influencer, analizar_influencer, medir_knn
 
 # ─────────────────────────────────────────
 # CARGAR DATOS
 # ─────────────────────────────────────────
-ratings = pd.read_csv('data/ratings.csv')   # userId, movieId, rating, timestamp
+ratings = pd.read_csv('data/example.csv')   # userId, movieId, rating, timestamp
 
 rating_matrix = ratings.pivot_table(
     index='userId',
@@ -89,7 +90,7 @@ def knn_users(target_user_id: int, k: int = 10) -> list:
 
     print("-" * 55)
     print(f"  Vecino más cercano : Usuario {similarities[0][0]}  (sim={similarities[0][1]:.4f})")
-    print(f"  Vecino más lejano  : Usuario {similarities[k-1][0]}  (sim={similarities[k-1][1]:.4f})")
+    #print(f"  Vecino más lejano  : Usuario {similarities[k-1][0]}  (sim={similarities[k-1][1]:.4f})")
     print("=" * 55)
 
     return similarities[:k]
@@ -191,4 +192,14 @@ def recomendar(target_user_id: int, k: int = 10, umbral: float = UMBRAL, top_n: 
 # EJECUCIÓN
 # ─────────────────────────────────────────
 if __name__ == "__main__":
-    recomendar(target_user_id=1, k=10, umbral=3.0, top_n=10)
+    recomendar(target_user_id=8, k=10, umbral=3.0, top_n=5)
+
+        # 1. Crear usuarios nuevos
+    crear_usuarios_batch(cantidad=5, ratings_por_usuario=7)
+
+    # 2. Crear y analizar influencer
+    crear_influencer(user_id=9999)
+    analizar_influencer(influencer_id=9999, muestra=50)
+
+    # 3.5 Métricas de computación
+    medir_knn(target_user_id=1, k=10)

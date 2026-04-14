@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════
    CONFIGURACIÓN
 ══════════════════════════════════════════ */
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = `${window.location.origin}/api`;
 const CHART_COLORS = {
   coseno:     '#6c8fff',
   euclidiana: '#4fd1a1',
@@ -27,14 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
 ══════════════════════════════════════════ */
 async function checkServer() {
   try {
-    const res = await fetch(`${API_BASE}/estado`);
+    const res = await fetch(`${API_BASE}/estado?path=${encodeURIComponent(csvActivo)}`);
     const data = await res.json();
     serverOk = true;
     setStatus('ok', `Servidor activo · ${data.usuarios} usuarios`);
 
-    if (!data.cargado) {
-      await cargarCSV(csvActivo);
-    }
+    await cargarCSV(csvActivo);
   } catch {
     serverOk = false;
     setStatus('err', 'Sin conexión al servidor');
@@ -83,7 +81,8 @@ async function cargarCSV(path) {
   setStatus('', `Cargando ${path}…`);
   try {
     const data = await apiPost('/cargar', { path });
-    setStatus('ok', `${path} · ${data.usuarios.toLocaleString()} usuarios`);
+    csvActivo = data.path;
+    setStatus('ok', `${data.path} · ${data.usuarios.toLocaleString()} usuarios`);
   } catch (e) {
     setStatus('err', e.message || 'Error al cargar CSV');
   }
@@ -115,7 +114,7 @@ async function runKNN() {
   setLoading('btn-t1-run', true);
 
   try {
-    const data = await apiPost('/knn', { usuario_id: uid, k, metrica });
+    const data = await apiPost('/knn', { path: csvActivo, usuario_id: uid, k, metrica });
 
     /* métricas */
     const maxScore = data.vecinos.length ? data.vecinos[0].puntaje : 0;
@@ -189,7 +188,7 @@ async function runRecommend() {
   setLoading('btn-t2-run', true);
 
   try {
-    const data = await apiPost('/recomendar', { usuario_id: uid, k, umbral, top_n: topN });
+    const data = await apiPost('/recomendar', { path: csvActivo, usuario_id: uid, k, umbral, top_n: topN });
     const recs = data.recomendaciones;
 
     const maxPred = recs.length ? recs[0].prediccion : 0;
@@ -278,7 +277,7 @@ async function crearBatch() {
   setLoading('btn-t3-batch', true);
 
   try {
-    const data = await apiPost('/batch', { cantidad, num_ratings });
+    const data = await apiPost('/batch', { path: csvActivo, cantidad, num_ratings });
     const out  = document.getElementById('t3-batch-out');
     const badges = data.nuevos_ids.map(id => `<span class="badge badge-blue">${id}</span>`).join('');
     out.innerHTML = `
@@ -306,7 +305,7 @@ async function crearInfluencer() {
   setLoading('btn-t3-inf', true);
 
   try {
-    const data = await apiPost('/influencer', { influencer_id, top_n });
+    const data = await apiPost('/influencer', { path: csvActivo, influencer_id, top_n });
     document.getElementById('t3-inf-out').innerHTML = `
       <div class="influencer-pill">★ Influencer ID: ${data.influencer_id} creado</div>
       <div class="metrics" style="margin-top:0.75rem">
@@ -342,8 +341,8 @@ async function comparar() {
 
   try {
     const [knnData, recData] = await Promise.all([
-      apiPost('/knn',       { usuario_id: uid, k, metrica: 'coseno' }),
-      apiPost('/recomendar', { usuario_id: uid, k, umbral: 3.0, top_n: 5 }),
+      apiPost('/knn',       { path: csvActivo, usuario_id: uid, k, metrica: 'coseno' }),
+      apiPost('/recomendar', { path: csvActivo, usuario_id: uid, k, umbral: 3.0, top_n: 5 }),
     ]);
 
     const vecRows = knnData.vecinos.slice(0, 5).map((v, i) => {
@@ -497,7 +496,7 @@ async function analyzeDataset() {
   prog.style.width = '40%';
 
   try {
-    const d = await apiGet('/analisis');
+    const d = await apiGet(`/analisis?path=${encodeURIComponent(csvActivo)}`);
     prog.style.width = '100%';
 
     await sleep(200);
@@ -596,19 +595,47 @@ async function analyzeDataset() {
    API HELPERS
 ══════════════════════════════════════════ */
 async function apiPost(endpoint, body) {
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
-  const json = await res.json();
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('No se pudo conectar con la API. Verifica el despliegue de /api en Vercel.');
+  }
+
+  const text = await res.text();
+  let json = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    throw new Error('La API devolvio una respuesta invalida.');
+  }
+
   if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
   return json;
 }
 
 async function apiGet(endpoint) {
-  const res  = await fetch(`${API_BASE}${endpoint}`);
-  const json = await res.json();
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`);
+  } catch {
+    throw new Error('No se pudo conectar con la API. Verifica el despliegue de /api en Vercel.');
+  }
+
+  const text = await res.text();
+  let json = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    throw new Error('La API devolvio una respuesta invalida.');
+  }
+
   if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
   return json;
 }

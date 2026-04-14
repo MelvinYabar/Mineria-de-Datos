@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MovieLens · Sistema de Recomendación</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --card: #1a1e28;
+    --card2: #20253200;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #eaedf5;
+    --muted: #7a8099;
+    --accent: #6c8fff;
+    --accent2: #4fd1a1;
+    --accent3: #f5a742;
+    --accent4: #f06470;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  /* ── LAYOUT ── */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .main { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
+
+  /* ── SIDEBAR ── */
+  .logo {
+    padding: 1.5rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .nav { padding: 1rem 0; flex: 1; }
+  .nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.75rem 1.25rem 0.25rem;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.6rem 1.25rem;
+    cursor: pointer;
+    border-radius: 0;
+    font-size: 13.5px;
+    color: var(--muted);
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    position: relative;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active {
+    color: var(--accent);
+    background: rgba(108,143,255,0.07);
+    border-left-color: var(--accent);
+  }
+  .nav-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .nav-item.active .nav-dot { opacity: 1; }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 10px;
+    background: rgba(108,143,255,0.15);
+    color: var(--accent);
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  /* ── CSV PICKER ── */
+  .csv-section {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+  }
+  .csv-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .csv-btn {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .csv-btn:hover { border-color: var(--border2); color: var(--text); }
+  .csv-btn.selected {
+    background: rgba(79,209,161,0.08);
+    border-color: rgba(79,209,161,0.3);
+    color: var(--accent2);
+  }
+
+  /* ── HEADER ── */
+  .section-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 1.75rem;
+    gap: 1rem;
+  }
+  .section-title { font-size: 22px; font-weight: 600; }
+  .section-desc { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .task-tag {
+    font-size: 11px; font-family: var(--mono);
+    background: rgba(108,143,255,0.12);
+    color: var(--accent);
+    padding: 4px 10px; border-radius: 20px;
+    white-space: nowrap;
+    border: 1px solid rgba(108,143,255,0.2);
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 11px;
+  }
+
+  /* ── FORM ELEMENTS ── */
+  .form-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  input[type="number"], input[type="text"], select {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 0.5rem 0.75rem;
+    width: 120px;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select { width: 160px; cursor: pointer; }
+  select option { background: #1a1e28; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; outline: none;
+    transition: all 0.15s; white-space: nowrap;
+    font-family: var(--sans);
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #7fa0ff; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    border: 1px solid var(--border2);
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+  .btn-green { background: var(--accent2); color: #0a2218; }
+  .btn-green:hover { background: #6fe0b5; }
+  .btn-amber { background: var(--accent3); color: #2a1800; }
+  .btn-amber:hover { background: #f7ba65; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .btn-icon { font-size: 14px; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { border-bottom: 1px solid var(--border2); }
+  th {
+    text-align: left; padding: 0.5rem 0.75rem;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); white-space: nowrap;
+  }
+  td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .rank-cell { font-family: var(--mono); color: var(--muted); font-size: 12px; }
+  .score-cell { font-family: var(--mono); color: var(--accent2); font-weight: 500; }
+  .sim-cell { font-family: var(--mono); color: var(--accent); }
+  .uid-cell { font-family: var(--mono); }
+
+  /* ── METRIC CARDS ── */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+  .metric {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.875rem 1rem;
+  }
+  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 0.35rem; font-family: var(--mono); }
+  .metric-val { font-size: 22px; font-weight: 600; font-family: var(--mono); }
+  .metric-val.blue { color: var(--accent); }
+  .metric-val.green { color: var(--accent2); }
+  .metric-val.amber { color: var(--accent3); }
+  .metric-val.red { color: var(--accent4); }
+
+  /* ── LOG / OUTPUT ── */
+  .log-box {
+    background: #0a0c10;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #a8c0a0;
+    padding: 1rem;
+    max-height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.7;
+  }
+  .log-box .log-accent { color: var(--accent2); }
+  .log-box .log-warn { color: var(--accent3); }
+  .log-box .log-err { color: var(--accent4); }
+
+  /* ── STATUS BADGE ── */
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 11px; font-family: var(--mono);
+  }
+  .badge-blue { background: rgba(108,143,255,0.12); color: var(--accent); border: 1px solid rgba(108,143,255,0.2); }
+  .badge-green { background: rgba(79,209,161,0.12); color: var(--accent2); border: 1px solid rgba(79,209,161,0.25); }
+  .badge-amber { background: rgba(245,167,66,0.12); color: var(--accent3); border: 1px solid rgba(245,167,66,0.25); }
+  .badge-red { background: rgba(240,100,112,0.12); color: var(--accent4); border: 1px solid rgba(240,100,112,0.25); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap { height: 4px; background: rgba(255,255,255,0.07); border-radius: 4px; overflow: hidden; margin: 0.5rem 0; }
+  .progress-bar { height: 100%; border-radius: 4px; background: var(--accent2); transition: width 0.4s ease; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── SECTION PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+
+  /* ── PERF TABLE ── */
+  .perf-table th, .perf-table td { font-family: var(--mono); font-size: 12px; }
+  .perf-table td:first-child { color: var(--muted); }
+  .dist-coseno { color: var(--accent); }
+  .dist-euclidiana { color: var(--accent2); }
+  .dist-manhattan { color: var(--accent3); }
+  .time-cell { color: var(--text); }
+
+  /* ── DATASET ANALYSIS ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .genre-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+  .genre-bar-fill { height: 6px; border-radius: 3px; background: var(--accent); min-width: 4px; }
+  .genre-name { width: 120px; flex-shrink: 0; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .genre-count { color: var(--text); font-family: var(--mono); font-size: 11px; min-width: 40px; text-align: right; }
+
+  /* ── INFLUENCER ── */
+  .influencer-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(245,167,66,0.08);
+    border: 1px solid rgba(245,167,66,0.25);
+    color: var(--accent3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px; font-family: var(--mono);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── CHART CONTAINER ── */
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 2.5rem 1rem;
+    color: var(--muted); font-size: 13px;
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 0.5rem; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+  /* ── TOOLTIP ── */
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+    background: #2a2e3d; color: var(--text); padding: 4px 10px;
+    border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 100;
+    border: 1px solid var(--border2); pointer-events: none;
+  }
+
+  /* ── FILE UPLOAD ── */
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(108,143,255,0.03); }
+  .upload-zone input { display: none; }
+  .upload-label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .file-name { font-family: var(--mono); font-size: 12px; color: var(--accent2); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">MovieLens KNN</div>
+    <div class="logo-sub">Sistema de Recomendación</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-label">Tareas</div>
+    <div class="nav-item active" onclick="navigate('t1', this)">
+      <span class="nav-dot"></span> K-NN · Vecinos
+      <span class="nav-badge">T1</span>
+    </div>
+    <div class="nav-item" onclick="navigate('t2', this)">
+      <span class="nav-dot"></span> Recomendaciones
+      <span class="nav-badge">T2</span>
+    </div>
+    <div class="nav-item" onclick="navigate('t3', this)">
+      <span class="nav-dot"></span> Influencer & Batch
+      <span class="nav-badge">T3</span>
+    </div>
+    <div class="nav-item" onclick="navigate('t4', this)">
+      <span class="nav-dot"></span> Complejidad & MAE
+      <span class="nav-badge">T4</span>
+    </div>
+    <div class="nav-label">Datos</div>
+    <div class="nav-item" onclick="navigate('analysis', this)">
+      <span class="nav-dot"></span> Análisis Dataset
+    </div>
+  </nav>
+
+  <!-- CSV PICKER -->
+  <div class="csv-section">
+    <div class="csv-label">Dataset activo</div>
+    <button class="csv-btn selected" id="btn-example" onclick="selectCSV('example')">
+      📄 example.csv <br><span style="color:var(--muted);font-size:10px">48 registros</span>
+    </button>
+    <button class="csv-btn" id="btn-ratings" onclick="selectCSV('ratings')">
+      📦 ratings.csv <br><span style="color:var(--muted);font-size:10px">100 836 registros</span>
+    </button>
+    <div style="margin-top:8px">
+      <div class="upload-zone" onclick="document.getElementById('csvUpload').click()">
+        <div style="font-size:18px">⬆</div>
+        <div class="upload-label">Cargar CSV propio</div>
+        <input type="file" id="csvUpload" accept=".csv" onchange="loadCustomCSV(event)">
+        <div class="file-name" id="customFileName"></div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main class="main">
+
+<!-- ─────────── TAREA 1: KNN ─────────── -->
+<div class="page active" id="page-t1">
+  <div class="section-header">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="section-title">Vecinos más cercanos</div>
+        <span class="task-tag">Tarea 1</span>
+      </div>
+      <div class="section-desc">Algoritmo K-NN con métricas de similitud y distancia</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Parámetros</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Usuario ID</label>
+        <input type="number" id="t1-uid" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>K vecinos</label>
+        <input type="number" id="t1-k" value="10" min="1" max="50">
+      </div>
+      <div class="form-group">
+        <label>Métrica</label>
+        <select id="t1-metric">
+          <option value="coseno">Similitud Coseno</option>
+          <option value="euclidiana">Distancia Euclidiana</option>
+          <option value="manhattan">Distancia Manhattan</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="runKNN()">
+        <span class="btn-icon">▶</span> Calcular K-NN
+      </button>
+    </div>
+  </div>
+
+  <div class="metrics" id="t1-metrics" style="display:none">
+    <div class="metric">
+      <div class="metric-label">vecinos encontrados</div>
+      <div class="metric-val blue" id="t1-m-vecinos">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">mayor similitud</div>
+      <div class="metric-val green" id="t1-m-maxsim">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">películas usuario</div>
+      <div class="metric-val amber" id="t1-m-movs">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">tiempo (ms)</div>
+      <div class="metric-val" id="t1-m-time">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Resultados K-NN</div>
+    <div class="table-wrap" id="t1-results">
+      <div class="empty"><div class="empty-icon">◎</div>Configura los parámetros y ejecuta el cálculo</div>
+    </div>
+  </div>
+
+  <div class="card" style="display:none" id="t1-chart-card">
+    <div class="card-title">Distribución de similitud</div>
+    <div class="chart-wrap">
+      <canvas id="t1-chart" role="img" aria-label="Similitud de vecinos KNN"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── TAREA 2: RECOMENDACIONES ─────────── -->
+<div class="page" id="page-t2">
+  <div class="section-header">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="section-title">Motor de Recomendaciones</div>
+        <span class="task-tag">Tarea 2</span>
+      </div>
+      <div class="section-desc">Predicción por filtrado colaborativo basado en vecinos</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Parámetros</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Usuario ID</label>
+        <input type="number" id="t2-uid" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>K vecinos</label>
+        <input type="number" id="t2-k" value="10" min="1" max="50">
+      </div>
+      <div class="form-group">
+        <label>Umbral rating</label>
+        <input type="number" id="t2-thresh" value="3.0" min="0" max="5" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Top N</label>
+        <input type="number" id="t2-topn" value="10" min="1" max="50">
+      </div>
+      <button class="btn btn-primary" onclick="runRecommend()">
+        <span class="btn-icon">▶</span> Recomendar
+      </button>
+    </div>
+  </div>
+
+  <div class="metrics" id="t2-metrics" style="display:none">
+    <div class="metric">
+      <div class="metric-label">candidatas</div>
+      <div class="metric-val blue" id="t2-m-cands">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">predicción máx</div>
+      <div class="metric-val green" id="t2-m-maxpred">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">predicción mín</div>
+      <div class="metric-val amber" id="t2-m-minpred">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">vecinos usados</div>
+      <div class="metric-val" id="t2-m-vecs">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Películas Recomendadas</div>
+    <div class="table-wrap" id="t2-results">
+      <div class="empty"><div class="empty-icon">🎬</div>Ejecuta el motor para ver recomendaciones</div>
+    </div>
+  </div>
+
+  <div class="card" style="display:none" id="t2-chart-card">
+    <div class="card-title">Distribución de predicciones</div>
+    <div class="chart-wrap">
+      <canvas id="t2-chart" role="img" aria-label="Distribución de predicciones de ratings"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── TAREA 3: INFLUENCER & BATCH ─────────── -->
+<div class="page" id="page-t3">
+  <div class="section-header">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="section-title">Influencer & Usuarios Batch</div>
+        <span class="task-tag">Tarea 3</span>
+      </div>
+      <div class="section-desc">Creación de usuarios sintéticos y perfil influencer para evaluar impacto</div>
+    </div>
+  </div>
+
+  <!-- Crear Batch -->
+  <div class="card">
+    <div class="card-title">Crear Usuarios Batch</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cantidad</label>
+        <input type="number" id="t3-cant" value="5" min="1" max="50">
+      </div>
+      <div class="form-group">
+        <label>Ratings por usuario</label>
+        <input type="number" id="t3-nrat" value="20" min="1" max="200">
+      </div>
+      <button class="btn btn-green" onclick="crearBatch()">
+        <span class="btn-icon">＋</span> Crear Batch
+      </button>
+    </div>
+    <div id="t3-batch-out" style="margin-top:0.75rem"></div>
+  </div>
+
+  <!-- Crear Influencer -->
+  <div class="card">
+    <div class="card-title">Crear Perfil Influencer</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Influencer ID</label>
+        <input type="number" id="t3-iid" value="9999" min="1">
+      </div>
+      <div class="form-group">
+        <label>Top N populares</label>
+        <input type="number" id="t3-itop" value="100" min="10" max="500">
+      </div>
+      <button class="btn btn-amber" onclick="crearInfluencer()">
+        ★ Crear Influencer
+      </button>
+    </div>
+    <div id="t3-inf-out" style="margin-top:0.75rem"></div>
+  </div>
+
+  <!-- Comparativa antes/después -->
+  <div class="card">
+    <div class="card-title">Comparativa de Recomendaciones (antes vs después)</div>
+    <div class="form-row" style="margin-bottom:1rem">
+      <div class="form-group">
+        <label>Usuario objetivo</label>
+        <input type="number" id="t3-uid" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>K</label>
+        <input type="number" id="t3-k" value="10" min="1" max="50">
+      </div>
+      <button class="btn btn-primary" onclick="comparar()">
+        ⇄ Comparar
+      </button>
+    </div>
+    <div id="t3-compare-out">
+      <div class="empty"><div class="empty-icon">⇄</div>Primero crea un influencer, luego compara</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── TAREA 4: COMPLEJIDAD ─────────── -->
+<div class="page" id="page-t4">
+  <div class="section-header">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="section-title">Análisis de Complejidad & MAE</div>
+        <span class="task-tag">Tarea 4</span>
+      </div>
+      <div class="section-desc">Rendimiento y precisión según tamaño del dataset</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Configurar experimento</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Usuario objetivo</label>
+        <input type="number" id="t4-uid" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>Cortes (filas)</label>
+        <input type="text" id="t4-cuts" value="100,500,1000" style="width:200px" placeholder="100,500,1000">
+      </div>
+      <button class="btn btn-primary" onclick="runExperiment()">
+        <span class="btn-icon">▶</span> Ejecutar
+      </button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">Separa los cortes con comas. Máximo: registros disponibles en el CSV seleccionado.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Tabla de Rendimiento</div>
+    <div class="table-wrap" id="t4-table">
+      <div class="empty"><div class="empty-icon">⏱</div>Ejecuta el experimento para ver los resultados</div>
+    </div>
+  </div>
+
+  <div id="t4-charts-wrap" style="display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="card">
+        <div class="card-title">Tiempo de cálculo (seg)</div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="t4-time-chart" role="img" aria-label="Tiempo de cálculo por registros y métrica"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">MAE por métrica</div>
+        <div class="chart-wrap" style="height:200px">
+          <canvas id="t4-mae-chart" role="img" aria-label="Error absoluto medio por métrica"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── ANÁLISIS DATASET ─────────── -->
+<div class="page" id="page-analysis">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Análisis del Dataset</div>
+      <div class="section-desc">Estadísticas descriptivas del dataset seleccionado</div>
+    </div>
+    <button class="btn btn-secondary" onclick="analyzeDataset()">↺ Analizar</button>
+  </div>
+
+  <div id="analysis-loading" style="display:none" class="card">
+    <div style="display:flex;align-items:center;gap:10px;color:var(--muted)">
+      <div class="spinner"></div> Procesando dataset…
+    </div>
+    <div class="progress-wrap" style="margin-top:0.75rem">
+      <div class="progress-bar" id="analysis-prog" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div id="analysis-out">
+    <div class="empty"><div class="empty-icon">📊</div>Haz clic en "Analizar" para procesar el dataset</div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let activeCSV = 'example';
+let userRatings = {};     // {uid: {mid: rating}}
+let dataLoaded = false;
+let influencerAdded = false;
+let influencerRatings = {};
+let batchIds = [];
+let charts = {};
+
+const CSV_URLS = {
+  example: 'example.csv',
+  ratings: 'ratings.csv',
+  movies: 'movies.csv'
+};
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+function navigate(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  el.classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  CSV SELECTOR
+// ══════════════════════════════════════════════
+function selectCSV(name) {
+  activeCSV = name;
+  document.getElementById('btn-example').classList.toggle('selected', name === 'example');
+  document.getElementById('btn-ratings').classList.toggle('selected', name === 'ratings');
+  dataLoaded = false;
+  userRatings = {};
+  influencerAdded = false;
+  batchIds = [];
+  loadCSVData();
+}
+
+function loadCustomCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  document.getElementById('customFileName').textContent = file.name;
+  document.getElementById('btn-example').classList.remove('selected');
+  document.getElementById('btn-ratings').classList.remove('selected');
+  activeCSV = 'custom';
+  dataLoaded = false;
+  userRatings = {};
+
+  Papa.parse(file, {
+    header: true, dynamicTyping: true, skipEmptyLines: true,
+    complete: function(res) { buildRatingsMap(res.data); }
+  });
+}
+
+function loadCSVData() {
+  // For demo: we use inline sample data generation when files aren't available
+  // In production, replace URL with actual path
+  const url = CSV_URLS[activeCSV] || CSV_URLS['example'];
+  
+  Papa.parse(url, {
+    download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
+    complete: function(res) {
+      if (res.data && res.data.length > 0) {
+        buildRatingsMap(res.data);
+      } else {
+        // Fallback: generate synthetic data for demo
+        generateSyntheticData();
+      }
+    },
+    error: function() {
+      generateSyntheticData();
+    }
+  });
+}
+
+function buildRatingsMap(rows) {
+  userRatings = {};
+  for (const row of rows) {
+    const uid = parseInt(row.userId);
+    const mid = parseInt(row.movieId);
+    const r = parseFloat(row.rating);
+    if (isNaN(uid) || isNaN(mid) || isNaN(r)) continue;
+    if (!userRatings[uid]) userRatings[uid] = {};
+    userRatings[uid][mid] = r;
+  }
+  dataLoaded = true;
+  console.log('Loaded', Object.keys(userRatings).length, 'users');
+}
+
+function generateSyntheticData() {
+  // Generate realistic synthetic data for demo purposes
+  userRatings = {};
+  const movies = Array.from({length: 200}, (_, i) => i + 1);
+  const numUsers = activeCSV === 'ratings' ? 200 : 30;
+
+  for (let u = 1; u <= numUsers; u++) {
+    userRatings[u] = {};
+    const nMovies = 10 + Math.floor(Math.random() * 40);
+    const shuffled = [...movies].sort(() => Math.random() - 0.5).slice(0, nMovies);
+    for (const m of shuffled) {
+      userRatings[u][m] = parseFloat((1 + Math.random() * 4).toFixed(1));
+    }
+  }
+  dataLoaded = true;
+}
+
+// ══════════════════════════════════════════════
+//  MATH CORE (JS replication of app.py)
+// ══════════════════════════════════════════════
+function coseneSim(a, b) {
+  const keys = Object.keys(a).filter(k => b[k] !== undefined);
+  if (!keys.length) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for (const k of keys) dot += a[k] * b[k];
+  for (const k of Object.keys(a)) na += a[k] ** 2;
+  for (const k of Object.keys(b)) nb += b[k] ** 2;
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+function euclidean(a, b) {
+  const keys = Object.keys(a).filter(k => b[k] !== undefined);
+  if (!keys.length) return Infinity;
+  return Math.sqrt(keys.reduce((s, k) => s + (a[k] - b[k]) ** 2, 0));
+}
+
+function manhattan(a, b) {
+  const keys = Object.keys(a).filter(k => b[k] !== undefined);
+  if (!keys.length) return Infinity;
+  return keys.reduce((s, k) => s + Math.abs(a[k] - b[k]), 0);
+}
+
+function getKNN(uid, k, metric) {
+  const target = userRatings[uid];
+  if (!target) return [];
+  const isSim = metric === 'coseno';
+  const fn = metric === 'coseno' ? coseneSim : metric === 'euclidiana' ? euclidean : manhattan;
+
+  let results = [];
+  for (const [vid, prefs] of Object.entries(userRatings)) {
+    if (parseInt(vid) === uid) continue;
+    const score = fn(target, prefs);
+    if (isSim && score > 0) results.push([parseInt(vid), score]);
+    else if (!isSim && score !== Infinity) results.push([parseInt(vid), score]);
+  }
+
+  results.sort((a, b) => isSim ? b[1] - a[1] : a[1] - b[1]);
+  return results.slice(0, k);
+}
+
+function recommend(uid, k, threshold) {
+  const neighbors = getKNN(uid, k, 'coseno');
+  const seen = new Set(Object.keys(userRatings[uid] || {}).map(Number));
+  const accum = {};
+
+  for (const [vid, sim] of neighbors) {
+    for (const [mid, r] of Object.entries(userRatings[vid])) {
+      const m = parseInt(mid);
+      if (seen.has(m)) continue;
+      if (!accum[m]) accum[m] = [0, 0];
+      accum[m][0] += sim * r;
+      accum[m][1] += sim;
+    }
+  }
+
+  return Object.entries(accum)
+    .map(([mid, [ws, ss]]) => [parseInt(mid), ss > 0 ? ws / ss : 0])
+    .filter(([, pred]) => pred >= threshold)
+    .sort((a, b) => b[1] - a[1]);
+}
+
+// ══════════════════════════════════════════════
+//  TAREA 1: KNN
+// ══════════════════════════════════════════════
+function runKNN() {
+  if (!ensureLoaded()) return;
+  const uid = parseInt(document.getElementById('t1-uid').value);
+  const k = parseInt(document.getElementById('t1-k').value);
+  const metric = document.getElementById('t1-metric').value;
+
+  if (!userRatings[uid]) {
+    showError('t1-results', `Usuario ${uid} no encontrado en el dataset`);
+    return;
+  }
+
+  const t0 = performance.now();
+  const neighbors = getKNN(uid, k, metric);
+  const elapsed = (performance.now() - t0).toFixed(1);
+
+  const isSim = metric === 'coseno';
+  const maxScore = neighbors.length ? neighbors[0][1] : 0;
+  const movCount = Object.keys(userRatings[uid]).length;
+
+  document.getElementById('t1-metrics').style.display = 'grid';
+  document.getElementById('t1-m-vecinos').textContent = neighbors.length;
+  document.getElementById('t1-m-maxsim').textContent = maxScore.toFixed(4);
+  document.getElementById('t1-m-movs').textContent = movCount;
+  document.getElementById('t1-m-time').textContent = elapsed + 'ms';
+
+  if (!neighbors.length) {
+    showEmpty('t1-results', 'No se encontraron vecinos con similitud positiva');
+    return;
+  }
+
+  const metricLabel = isSim ? 'Similitud' : 'Distancia';
+  const scoreClass = isSim ? 'sim-cell' : 'score-cell';
+
+  let html = `<table><thead><tr>
+    <th>Rank</th><th>Usuario ID</th><th>${metricLabel}</th>
+    <th data-tip="Películas calificadas">Películas</th>
+    <th>Overlap</th>
+  </tr></thead><tbody>`;
+
+  const targetMovies = new Set(Object.keys(userRatings[uid]).map(Number));
+
+  for (let i = 0; i < neighbors.length; i++) {
+    const [vid, score] = neighbors[i];
+    const nMovies = Object.keys(userRatings[vid]).length;
+    const overlap = Object.keys(userRatings[vid]).filter(m => targetMovies.has(parseInt(m))).length;
+    const pct = Math.round((overlap / Math.min(targetMovies.size, nMovies)) * 100);
+
+    html += `<tr>
+      <td class="rank-cell">#${i + 1}</td>
+      <td class="uid-cell">${vid}</td>
+      <td class="${scoreClass}">${score.toFixed(4)}</td>
+      <td>${nMovies}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="progress-wrap" style="flex:1;margin:0"><div class="progress-bar" style="width:${pct}%;background:var(--accent)"></div></div>
+          <span style="font-size:11px;font-family:var(--mono);color:var(--muted);min-width:30px">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('t1-results').innerHTML = html;
+
+  // Chart
+  document.getElementById('t1-chart-card').style.display = 'block';
+  renderKNNChart(neighbors, isSim, metricLabel);
+}
+
+function renderKNNChart(neighbors, isSim, label) {
+  if (charts['t1']) charts['t1'].destroy();
+  const ctx = document.getElementById('t1-chart');
+  const labels = neighbors.map((_, i) => `#${i + 1}`);
+  const data = neighbors.map(([, s]) => parseFloat(s.toFixed(4)));
+  charts['t1'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label,
+        data,
+        backgroundColor: 'rgba(108,143,255,0.6)',
+        borderColor: 'rgba(108,143,255,1)',
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#7a8099', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#7a8099', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  TAREA 2: RECOMENDACIONES
+// ══════════════════════════════════════════════
+function runRecommend() {
+  if (!ensureLoaded()) return;
+  const uid = parseInt(document.getElementById('t2-uid').value);
+  const k = parseInt(document.getElementById('t2-k').value);
+  const thresh = parseFloat(document.getElementById('t2-thresh').value);
+  const topN = parseInt(document.getElementById('t2-topn').value);
+
+  if (!userRatings[uid]) {
+    showError('t2-results', `Usuario ${uid} no encontrado`);
+    return;
+  }
+
+  const neighbors = getKNN(uid, k, 'coseno');
+  const preds = recommend(uid, k, thresh);
+  const shown = preds.slice(0, topN);
+
+  document.getElementById('t2-metrics').style.display = 'grid';
+  document.getElementById('t2-m-cands').textContent = preds.length;
+  document.getElementById('t2-m-maxpred').textContent = preds.length ? preds[0][1].toFixed(3) : '—';
+  document.getElementById('t2-m-minpred').textContent = preds.length ? preds[preds.length - 1][1].toFixed(3) : '—';
+  document.getElementById('t2-m-vecs').textContent = neighbors.length;
+
+  if (!shown.length) {
+    showEmpty('t2-results', `No hay películas que superen umbral ${thresh}`);
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Rank</th><th>Movie ID</th><th>Predicción</th><th>Confianza</th>
+  </tr></thead><tbody>`;
+
+  const maxPred = shown[0][1];
+  for (let i = 0; i < shown.length; i++) {
+    const [mid, pred] = shown[i];
+    const pct = Math.round((pred / 5) * 100);
+    const conf = Math.round((pred / maxPred) * 100);
+    html += `<tr>
+      <td class="rank-cell">#${i + 1}</td>
+      <td class="uid-cell">${mid}</td>
+      <td class="score-cell">${pred.toFixed(4)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="progress-wrap" style="flex:1;margin:0"><div class="progress-bar" style="width:${conf}%;background:var(--accent2)"></div></div>
+          <span style="font-size:11px;font-family:var(--mono);color:var(--muted);min-width:30px">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('t2-results').innerHTML = html;
+
+  // Chart
+  document.getElementById('t2-chart-card').style.display = 'block';
+  const buckets = [0, 0, 0, 0, 0]; // 1-2, 2-3, 3-4, 4-5, 5
+  for (const [, p] of preds) {
+    const idx = Math.min(Math.floor(p) - 1, 4);
+    if (idx >= 0) buckets[idx]++;
+  }
+  if (charts['t2']) charts['t2'].destroy();
+  const ctx2 = document.getElementById('t2-chart');
+  charts['t2'] = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['1–2', '2–3', '3–4', '4–5', '5'],
+      datasets: [{
+        label: 'Películas',
+        data: buckets,
+        backgroundColor: ['rgba(240,100,112,0.6)','rgba(245,167,66,0.6)','rgba(108,143,255,0.6)','rgba(79,209,161,0.6)','rgba(79,209,161,0.9)'],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#7a8099' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#7a8099' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  TAREA 3: INFLUENCER & BATCH
+// ══════════════════════════════════════════════
+function crearBatch() {
+  if (!ensureLoaded()) return;
+  const cant = parseInt(document.getElementById('t3-cant').value);
+  const nRat = parseInt(document.getElementById('t3-nrat').value);
+
+  const allMovies = [...new Set(Object.values(userRatings).flatMap(d => Object.keys(d).map(Number)))];
+  if (!allMovies.length) { alert('No hay datos cargados'); return; }
+
+  const maxId = Math.max(...Object.keys(userRatings).map(Number));
+  batchIds = [];
+
+  for (let i = 1; i <= cant; i++) {
+    const newId = maxId + i;
+    const sample = shuffle(allMovies).slice(0, Math.min(nRat, allMovies.length));
+    userRatings[newId] = {};
+    for (const mid of sample) {
+      userRatings[newId][mid] = parseFloat((1 + Math.random() * 4).toFixed(1));
+    }
+    batchIds.push(newId);
+  }
+
+  const out = document.getElementById('t3-batch-out');
+  out.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="badge badge-green">✔ ${cant} usuarios creados</span>
+      ${batchIds.map(id => `<span class="badge badge-blue">${id}</span>`).join('')}
+    </div>
+    <div class="log-box" style="margin-top:0.75rem">IDs generados: [${batchIds.join(', ')}]
+Cada usuario tiene ~${nRat} ratings aleatorios
+Total usuarios en memoria: ${Object.keys(userRatings).length}</div>
+  `;
+}
+
+function crearInfluencer() {
+  if (!ensureLoaded()) return;
+  const iid = parseInt(document.getElementById('t3-iid').value);
+  const topN = parseInt(document.getElementById('t3-itop').value);
+
+  const count = {}, sums = {};
+  for (const prefs of Object.values(userRatings)) {
+    for (const [mid, r] of Object.entries(prefs)) {
+      count[mid] = (count[mid] || 0) + 1;
+      sums[mid] = (sums[mid] || 0) + r;
+    }
+  }
+
+  const popular = Object.entries(count)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN);
+
+  influencerRatings = {};
+  for (const [mid] of popular) {
+    influencerRatings[mid] = parseFloat((sums[mid] / count[mid]).toFixed(2));
+  }
+  userRatings[iid] = influencerRatings;
+  influencerAdded = true;
+
+  const avgRating = Object.values(influencerRatings).reduce((a, b) => a + b, 0) / popular.length;
+
+  const out = document.getElementById('t3-inf-out');
+  out.innerHTML = `
+    <div class="influencer-pill">★ Influencer ID: ${iid} creado</div>
+    <div class="metrics" style="margin-top:0.75rem">
+      <div class="metric"><div class="metric-label">películas en perfil</div><div class="metric-val amber">${popular.length}</div></div>
+      <div class="metric"><div class="metric-label">rating promedio</div><div class="metric-val green">${avgRating.toFixed(2)}</div></div>
+      <div class="metric"><div class="metric-label">total usuarios</div><div class="metric-val blue">${Object.keys(userRatings).length}</div></div>
+    </div>
+  `;
+}
+
+function comparar() {
+  if (!ensureLoaded()) return;
+  if (!influencerAdded) {
+    document.getElementById('t3-compare-out').innerHTML = '<div class="empty"><div class="empty-icon">⚠</div>Primero crea un perfil influencer</div>';
+    return;
+  }
+
+  const uid = parseInt(document.getElementById('t3-uid').value);
+  const k = parseInt(document.getElementById('t3-k').value);
+
+  if (!userRatings[uid]) {
+    showError('t3-compare-out', `Usuario ${uid} no encontrado`);
+    return;
+  }
+
+  const neighbors = getKNN(uid, k, 'coseno');
+  const preds = recommend(uid, k, 3.0).slice(0, 10);
+
+  let html = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em">Top vecinos</div>
+      <table><thead><tr><th>Rank</th><th>UID</th><th>Sim</th></tr></thead><tbody>`;
+
+  for (let i = 0; i < Math.min(k, neighbors.length); i++) {
+    const [vid, sim] = neighbors[i];
+    const isInf = vid === parseInt(document.getElementById('t3-iid').value);
+    html += `<tr>
+      <td class="rank-cell">#${i + 1}</td>
+      <td class="uid-cell" style="${isInf ? 'color:var(--accent3)' : ''}">${vid}${isInf ? ' ★' : ''}</td>
+      <td class="sim-cell">${sim.toFixed(4)}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:0.5rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em">Top recomendaciones</div>
+      <table><thead><tr><th>Rank</th><th>Movie ID</th><th>Score</th></tr></thead><tbody>`;
+
+  for (let i = 0; i < Math.min(k, preds.length); i++) {
+    const [mid, score] = preds[i];
+    html += `<tr>
+      <td class="rank-cell">#${i + 1}</td>
+      <td class="uid-cell">${mid}</td>
+      <td class="score-cell">${score.toFixed(4)}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table></div></div>';
+  document.getElementById('t3-compare-out').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  TAREA 4: COMPLEJIDAD & MAE
+// ══════════════════════════════════════════════
+async function runExperiment() {
+  if (!ensureLoaded()) return;
+  const uid = parseInt(document.getElementById('t4-uid').value);
+  const cutsRaw = document.getElementById('t4-cuts').value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+  if (!cutsRaw.length) { alert('Ingresa al menos un corte'); return; }
+
+  const allUsers = Object.keys(userRatings).map(Number).sort((a, b) => a - b);
+  const totalUsers = allUsers.length;
+
+  const metrics = [
+    { name: 'Coseno', fn: coseneSim, isSim: true, cls: 'dist-coseno' },
+    { name: 'Euclidiana', fn: euclidean, isSim: false, cls: 'dist-euclidiana' },
+    { name: 'Manhattan', fn: manhattan, isSim: false, cls: 'dist-manhattan' }
+  ];
+
+  let html = `<table class="perf-table"><thead><tr>
+    <th>Registros</th><th>Métrica</th><th>T. Carga</th><th>T. Dist.</th><th>T. Rec.</th><th>RAM est.</th><th>MAE</th>
+  </tr></thead><tbody>`;
+
+  const timeData = { labels: [], coseno: [], euclidiana: [], manhattan: [] };
+  const maeData = { labels: [], coseno: [], euclidiana: [], manhattan: [] };
+  const cuts = cutsRaw.map(n => Math.min(n, totalUsers));
+  const seen = new Set();
+
+  for (const n of cuts) {
+    if (seen.has(n)) continue;
+    seen.add(n);
+
+    const subUsers = allUsers.slice(0, n);
+    const subData = {};
+    const tLoad0 = performance.now();
+    for (const u of subUsers) subData[u] = userRatings[u];
+    const tLoad = ((performance.now() - tLoad0) / 1000).toFixed(4);
+
+    const ram = (JSON.stringify(subData).length / 1024 / 1024).toFixed(2);
+
+    const targetUid = subData[uid] ? uid : subUsers[0];
+    const targetPrefs = subData[targetUid];
+
+    timeData.labels.push(n.toLocaleString());
+    maeData.labels.push(n.toLocaleString());
+
+    for (const { name, fn, isSim, cls } of metrics) {
+      const t1 = performance.now();
+      const neighbors = [];
+      for (const [vid, prefs] of Object.entries(subData)) {
+        if (parseInt(vid) === targetUid) continue;
+        const score = fn(targetPrefs, prefs);
+        if (isSim && score > 0) neighbors.push([parseInt(vid), score]);
+        else if (!isSim && score !== Infinity) neighbors.push([parseInt(vid), score]);
+      }
+      neighbors.sort((a, b) => isSim ? b[1] - a[1] : a[1] - b[1]);
+      const top10 = neighbors.slice(0, 10);
+      const tDist = ((performance.now() - t1) / 1000).toFixed(4);
+
+      const t2 = performance.now();
+      const accum = {};
+      for (const [vid, score] of top10) {
+        if (score === 0 || score === Infinity) continue;
+        const peso = isSim ? score : 1 / (1 + score);
+        for (const [mid, r] of Object.entries(subData[vid])) {
+          if (parseInt(mid) in targetPrefs) {
+            if (!accum[mid]) accum[mid] = [0, 0];
+            accum[mid][0] += peso * r;
+            accum[mid][1] += peso;
+          }
+        }
+      }
+      const preds = Object.entries(accum).map(([m, [s, w]]) => [parseInt(m), w > 0 ? s / w : 0]);
+      const tRec = ((performance.now() - t2) / 1000).toFixed(4);
+
+      let mae = 0;
+      const errors = preds.filter(([m]) => targetPrefs[m]).map(([m, p]) => Math.abs(p - targetPrefs[m]));
+      if (errors.length) mae = (errors.reduce((a, b) => a + b, 0) / errors.length).toFixed(4);
+
+      const key = name.toLowerCase();
+      timeData[key] = timeData[key] || [];
+      timeData[key].push(parseFloat(tDist));
+      maeData[key] = maeData[key] || [];
+      maeData[key].push(parseFloat(mae));
+
+      html += `<tr>
+        <td>${n.toLocaleString()}</td>
+        <td class="${cls}">${name}</td>
+        <td class="time-cell">${tLoad}s</td>
+        <td class="time-cell">${tDist}s</td>
+        <td class="time-cell">${tRec}s</td>
+        <td>${ram} MB</td>
+        <td style="color:var(--accent4)">${mae}</td>
+      </tr>`;
+    }
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('t4-table').innerHTML = html;
+
+  document.getElementById('t4-charts-wrap').style.display = 'grid';
+  await new Promise(r => setTimeout(r, 50));
+
+  if (charts['t4-time']) charts['t4-time'].destroy();
+  if (charts['t4-mae']) charts['t4-mae'].destroy();
+
+  charts['t4-time'] = new Chart(document.getElementById('t4-time-chart'), {
+    type: 'line',
+    data: {
+      labels: timeData.labels,
+      datasets: [
+        { label: 'Coseno', data: timeData.coseno, borderColor: '#6c8fff', borderWidth: 2, pointRadius: 4, fill: false },
+        { label: 'Euclidiana', data: timeData.euclidiana, borderColor: '#4fd1a1', borderWidth: 2, pointRadius: 4, fill: false },
+        { label: 'Manhattan', data: timeData.manhattan, borderColor: '#f5a742', borderWidth: 2, pointRadius: 4, fill: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#7a8099', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#7a8099', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+
+  charts['t4-mae'] = new Chart(document.getElementById('t4-mae-chart'), {
+    type: 'bar',
+    data: {
+      labels: timeData.labels,
+      datasets: [
+        { label: 'Coseno', data: maeData.coseno, backgroundColor: 'rgba(108,143,255,0.6)', borderRadius: 3 },
+        { label: 'Euclidiana', data: maeData.euclidiana, backgroundColor: 'rgba(79,209,161,0.6)', borderRadius: 3 },
+        { label: 'Manhattan', data: maeData.manhattan, backgroundColor: 'rgba(245,167,66,0.6)', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#7a8099', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#7a8099', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+
+  // Legend
+  const legendHtml = `
+    <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);margin-bottom:8px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#6c8fff;display:inline-block"></span>Coseno</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#4fd1a1;display:inline-block"></span>Euclidiana</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f5a742;display:inline-block"></span>Manhattan</span>
+    </div>`;
+  document.getElementById('t4-charts-wrap').insertAdjacentHTML('afterbegin', legendHtml);
+}
+
+// ══════════════════════════════════════════════
+//  ANÁLISIS DATASET
+// ══════════════════════════════════════════════
+async function analyzeDataset() {
+  if (!ensureLoaded()) return;
+
+  document.getElementById('analysis-loading').style.display = 'block';
+  document.getElementById('analysis-out').innerHTML = '';
+
+  await new Promise(r => setTimeout(r, 50));
+
+  const prog = document.getElementById('analysis-prog');
+  prog.style.width = '30%';
+
+  const allUsers = Object.keys(userRatings).map(Number);
+  const allRatings = Object.values(userRatings).flatMap(d => Object.values(d).map(Number));
+
+  prog.style.width = '60%';
+  await new Promise(r => setTimeout(r, 50));
+
+  const numUsers = allUsers.length;
+  const numRatings = allRatings.length;
+  const allMovies = new Set(Object.values(userRatings).flatMap(d => Object.keys(d).map(Number)));
+  const numMovies = allMovies.size;
+  const avgRating = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
+  const minR = Math.min(...allRatings);
+  const maxR = Math.max(...allRatings);
+
+  // Ratings per user distribution
+  const ratingsPerUser = allUsers.map(u => Object.keys(userRatings[u]).length);
+  const avgRatingsPerUser = ratingsPerUser.reduce((a, b) => a + b, 0) / ratingsPerUser.length;
+
+  // Sparsity
+  const sparsity = (1 - numRatings / (numUsers * numMovies)) * 100;
+
+  // Rating distribution
+  const ratingDist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // 0.5 to 5.0
+  for (const r of allRatings) {
+    const idx = Math.round(r * 2) - 1;
+    if (idx >= 0 && idx < 10) ratingDist[idx]++;
+  }
+
+  prog.style.width = '90%';
+  await new Promise(r => setTimeout(r, 50));
+
+  const html = `
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">usuarios</div><div class="metric-val blue">${numUsers.toLocaleString()}</div></div>
+      <div class="metric"><div class="metric-label">películas únicas</div><div class="metric-val green">${numMovies.toLocaleString()}</div></div>
+      <div class="metric"><div class="metric-label">ratings totales</div><div class="metric-val amber">${numRatings.toLocaleString()}</div></div>
+      <div class="metric"><div class="metric-label">rating promedio</div><div class="metric-val">${avgRating.toFixed(3)}</div></div>
+      <div class="metric"><div class="metric-label">ratings/usuario promedio</div><div class="metric-val blue">${avgRatingsPerUser.toFixed(1)}</div></div>
+      <div class="metric"><div class="metric-label">dispersión (sparsity)</div><div class="metric-val red">${sparsity.toFixed(2)}%</div></div>
+      <div class="metric"><div class="metric-label">rating mínimo</div><div class="metric-val">${minR}</div></div>
+      <div class="metric"><div class="metric-label">rating máximo</div><div class="metric-val">${maxR}</div></div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title">Distribución de ratings</div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="analysis-dist-chart" role="img" aria-label="Distribución de ratings del dataset">
+          Distribución de ratings desde ${minR} hasta ${maxR}
+        </canvas>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+      <div class="card">
+        <div class="card-title">Usuarios más activos (top 10)</div>
+        <table><thead><tr><th>Usuario ID</th><th>Ratings</th></tr></thead><tbody>
+          ${ratingsPerUser.map((n, i) => [allUsers[i], n]).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([uid, n]) =>
+            `<tr><td class="uid-cell">${uid}</td><td class="score-cell">${n}</td></tr>`
+          ).join('')}
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-title">Resumen estadístico</div>
+        <table>
+          <tr><td style="color:var(--muted);font-size:12px">Densidad</td><td class="score-cell">${(100 - sparsity).toFixed(4)}%</td></tr>
+          <tr><td style="color:var(--muted);font-size:12px">Mediana ratings/usuario</td><td class="score-cell">${median(ratingsPerUser).toFixed(0)}</td></tr>
+          <tr><td style="color:var(--muted);font-size:12px">Desv. estándar rating</td><td class="score-cell">${stddev(allRatings).toFixed(4)}</td></tr>
+          <tr><td style="color:var(--muted);font-size:12px">Dataset activo</td><td><span class="badge badge-green">${activeCSV}.csv</span></td></tr>
+        </table>
+      </div>
+    </div>
+  `;
+
+  prog.style.width = '100%';
+  await new Promise(r => setTimeout(r, 200));
+  document.getElementById('analysis-loading').style.display = 'none';
+  document.getElementById('analysis-out').innerHTML = html;
+
+  // Render chart
+  await new Promise(r => setTimeout(r, 50));
+  if (charts['analysis']) charts['analysis'].destroy();
+  const ctx = document.getElementById('analysis-dist-chart');
+  if (ctx) {
+    charts['analysis'] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['0.5','1.0','1.5','2.0','2.5','3.0','3.5','4.0','4.5','5.0'],
+        datasets: [{
+          label: 'Ratings',
+          data: ratingDist,
+          backgroundColor: ratingDist.map((_, i) => {
+            const colors = ['rgba(240,100,112,0.7)','rgba(240,100,112,0.6)','rgba(245,167,66,0.6)','rgba(245,167,66,0.6)','rgba(245,167,66,0.6)','rgba(108,143,255,0.6)','rgba(108,143,255,0.7)','rgba(79,209,161,0.6)','rgba(79,209,161,0.7)','rgba(79,209,161,0.9)'];
+            return colors[i];
+          }),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7a8099', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#7a8099', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function ensureLoaded() {
+  if (!dataLoaded) {
+    generateSyntheticData();
+    dataLoaded = true;
+  }
+  return true;
+}
+
+function showEmpty(id, msg) {
+  document.getElementById(id).innerHTML = `<div class="empty"><div class="empty-icon">◎</div>${msg}</div>`;
+}
+
+function showError(id, msg) {
+  document.getElementById(id).innerHTML = `<div class="empty" style="color:var(--accent4)"><div class="empty-icon">✗</div>${msg}</div>`;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function median(arr) {
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function stddev(arr) {
+  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  return Math.sqrt(arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+loadCSVData();
+</script>
+</body>
+</html>

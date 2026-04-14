@@ -8,55 +8,60 @@ import sys
 # 1. MÉTRICAS DE DISTANCIA / SIMILITUD
 # ==========================================
 
-def cosine_similarity(ratings_u: dict, ratings_v: dict) -> float:
-    common = set(ratings_u.keys()) & set(ratings_v.keys())
-    if not common:
+def similitud_coseno(calificaciones_u: dict, calificaciones_v: dict) -> float:
+    comunes = set(calificaciones_u.keys()) & set(calificaciones_v.keys())
+    if not comunes:
         return 0.0
-    dot_product = sum(ratings_u[m] * ratings_v[m] for m in common)
-    norm_u = math.sqrt(sum(r**2 for r in ratings_u.values()))
-    norm_v = math.sqrt(sum(r**2 for r in ratings_v.values()))
-    if norm_u == 0.0 or norm_v == 0.0:
+    producto_punto = sum(calificaciones_u[m] * calificaciones_v[m] for m in comunes)
+    norma_u = math.sqrt(sum(r**2 for r in calificaciones_u.values()))
+    norma_v = math.sqrt(sum(r**2 for r in calificaciones_v.values()))
+    
+    if norma_u == 0.0 or norma_v == 0.0:
         return 0.0
-    return dot_product / (norm_u * norm_v)
+    
+    return producto_punto / (norma_u * norma_v)
 
-def distancia_euclidiana(ratings_u: dict, ratings_v: dict) -> float:
-    common = set(ratings_u.keys()) & set(ratings_v.keys())
-    if not common:
+def distancia_euclidiana(calificaciones_u: dict, calificaciones_v: dict) -> float:
+    comunes = set(calificaciones_u.keys()) & set(calificaciones_v.keys())
+    if not comunes:
         return float('inf')
-    suma_sq = sum((ratings_u[m] - ratings_v[m]) ** 2 for m in common)
-    return math.sqrt(suma_sq)
+    suma_cuadrados = sum((calificaciones_u[m] - calificaciones_v[m]) ** 2 for m in comunes)
+    return math.sqrt(suma_cuadrados)
 
-def distancia_manhattan(ratings_u: dict, ratings_v: dict) -> float:
-    common = set(ratings_u.keys()) & set(ratings_v.keys())
-    if not common:
+
+def distancia_manhattan(calificaciones_u: dict, calificaciones_v: dict) -> float:
+    comunes = set(calificaciones_u.keys()) & set(calificaciones_v.keys())
+    if not comunes:
         return float('inf')
-    return sum(abs(ratings_u[m] - ratings_v[m]) for m in common)
+    return sum(abs(calificaciones_u[m] - calificaciones_v[m]) for m in comunes)
 
 # ==========================================
 # 2. ALGORITMO K-NN (TAREA 1)
 # ==========================================
 
-def get_knn(target_uid, user_ratings, k=10, func_dist=cosine_similarity, is_similarity=True):
-    if target_uid not in user_ratings:
+def obtener_knn(usuario_objetivo, calificaciones_usuarios, k=10, funcion_distancia=similitud_coseno, es_similitud=True):
+    if usuario_objetivo not in calificaciones_usuarios:
         return []
     
-    target_prefs = user_ratings[target_uid]
+    preferencias_objetivo = calificaciones_usuarios[usuario_objetivo]
     resultados = []
     
-    for uid, prefs in user_ratings.items():
-        if uid == target_uid: continue
-        score = func_dist(target_prefs, prefs)
+    for uid, prefs in calificaciones_usuarios.items():
+        if uid == usuario_objetivo:
+            continue
+        
+        puntaje = funcion_distancia(preferencias_objetivo, prefs)
         
         # Filtrar vecinos sin coincidencias
-        if is_similarity and score > 0:
-            resultados.append((uid, score))
-        elif not is_similarity and score != float('inf'):
-            resultados.append((uid, score))
+        if es_similitud and puntaje > 0:
+            resultados.append((uid, puntaje))
+        elif not es_similitud and puntaje != float('inf'):
+            resultados.append((uid, puntaje))
             
-    # Si es similitud (Coseno), mayor es mejor. Si es distancia, menor es mejor.
-    resultados.sort(key=lambda x: x[1], reverse=is_similarity)
+    # Si es similitud, mayor es mejor. Si es distancia, menor es mejor.
+    resultados.sort(key=lambda x: x[1], reverse=es_similitud)
+    
     return resultados[:k]
-
 # ==========================================
 # 3. ALGORITMO DE RECOMENDACIÓN (TAREA 2)
 # ==========================================
@@ -64,7 +69,7 @@ def get_knn(target_uid, user_ratings, k=10, func_dist=cosine_similarity, is_simi
 def recomendar(target_uid, user_ratings, k=10, umbral=3.0):
     print(f"\n[ Generando recomendaciones para Usuario {target_uid} (K={k}, Umbral={umbral}) ]")
     
-    vecinos = get_knn(target_uid, user_ratings, k=k, func_dist=cosine_similarity, is_similarity=True)
+    vecinos = obtener_knn(target_uid, user_ratings, k=k, funcion_distancia=similitud_coseno, es_similitud=True)
     if not vecinos:
         print("✘ No se encontraron vecinos con similitud positiva.")
         return []
@@ -150,7 +155,7 @@ def ejecutar_experimento_completo(path_csv, target_uid):
     # Asegúrate de que tu dataset tiene suficientes registros para estos cortes
     cantidades = [10000, 50000, 100000] 
     distancias = [
-        ('Coseno', cosine_similarity, True),
+        ('Coseno', similitud_coseno, True),
         ('Euclidiana', distancia_euclidiana, False),
         ('Manhattan', distancia_manhattan, False)
     ]
@@ -196,7 +201,7 @@ def ejecutar_experimento_completo(path_csv, target_uid):
         for nombre_dist, func_dist, is_sim in distancias:
             # 3. Medir "TiempoDistancia"
             start_dist = time.time()
-            vecinos = get_knn(target_uid, data_test, k=10, func_dist=func_dist, is_similarity=is_sim)
+            vecinos = obtener_knn(target_uid, data_test, k=10, funcion_distancia=func_dist, es_similitud=is_sim)
             time_distancia = time.time() - start_dist
 
             # 4. Medir "Recomendacion"
@@ -228,7 +233,7 @@ def ejecutar_experimento_completo(path_csv, target_uid):
 
 if __name__ == "__main__":
     # IMPORTANTE: Reemplaza con la ruta real de tu archivo ratings.csv de MovieLens
-    ruta_dataset = 'data/ratings.csv' 
+    ruta_dataset = 'data/example.csv' 
     
     print("Iniciando sistema...")
     # Carga inicial completa para las tareas 1, 2 y 3
@@ -242,21 +247,29 @@ if __name__ == "__main__":
 
 
         print(f"✔ Usuarios cargados: {len(user_ratings_global)}")
-        usuario_objetivo = int(input("Ingrese el ID del usuario objetivo: ")) # Puedes cambiarlo mediante input() si lo prefieres
+
+        # INPUTS
+        usuario_objetivo = int(input("Ingrese el ID del usuario objetivo: ")) 
         k = int(input("Ingrese el valor de K para vecinos: "))
+        cantidad = int(input("Ingrese la cantidad de usuarios a crear para el batch: "))
+        num_ratings = int(input("Ingrese la cantidad de calificaciones por usuario: "))
+
+
         # Tareas 1 y 2
-        recomendar(usuario_objetivo, user_ratings_global, k=10)
-        nuevos_vecinos = get_knn(int(usuario_objetivo), user_ratings_global, k)
+        recomendar(usuario_objetivo, user_ratings_global, k)
+        nuevos_vecinos = obtener_knn(int(usuario_objetivo), user_ratings_global, k)
         for uid, sim in nuevos_vecinos:
             print(f"\nVecino: {uid} | Similitud: {sim:.4f}")
         
         # Tarea 3
-        crear_usuarios_batch(user_ratings_global, cantidad=100)
+        crear_usuarios_batch(user_ratings_global, cantidad, num_ratings)
         crear_influencer(user_ratings_global, influencer_id=8888)
-        recomendar(usuario_objetivo, user_ratings_global, k=10) # Recomendar post-influencer
-        nuevos_vecinos = get_knn(int(usuario_objetivo), user_ratings_global, k)
+        recomendar(usuario_objetivo, user_ratings_global, k) # Recomendar post-influencer
+        nuevos_vecinos = obtener_knn(int(usuario_objetivo), user_ratings_global, k)
         for uid, sim in nuevos_vecinos:
             print(f"\nVecino: {uid} | Similitud: {sim:.4f}")
+
+
         # Tarea 4 (Cuadro de Complejidad Automatizado)
         ejecutar_experimento_completo(ruta_dataset, target_uid=usuario_objetivo)
 

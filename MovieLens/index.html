@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MovieLens · Sistema de Recomendación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">MovieLens KNN</div>
+      <div class="logo-sub">Sistema de Recomendación</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">Tareas</div>
+      <div class="nav-item active" data-page="t1">
+        <span class="nav-dot"></span> K-NN · Vecinos
+        <span class="nav-badge">T1</span>
+      </div>
+      <div class="nav-item" data-page="t2">
+        <span class="nav-dot"></span> Recomendaciones
+        <span class="nav-badge">T2</span>
+      </div>
+      <div class="nav-item" data-page="t3">
+        <span class="nav-dot"></span> Influencer & Batch
+        <span class="nav-badge">T3</span>
+      </div>
+      <div class="nav-item" data-page="t4">
+        <span class="nav-dot"></span> Complejidad & MAE
+        <span class="nav-badge">T4</span>
+      </div>
+      <div class="nav-label">Datos</div>
+      <div class="nav-item" data-page="analysis">
+        <span class="nav-dot"></span> Análisis Dataset
+      </div>
+    </nav>
+
+    <!-- CSV PICKER -->
+    <div class="csv-section">
+      <div class="csv-label">Dataset activo</div>
+      <button class="csv-btn selected" data-csv="example.csv">
+        📄 example.csv
+        <span class="csv-meta">48 registros</span>
+      </button>
+      <button class="csv-btn" data-csv="ratings.csv">
+        📦 ratings.csv
+        <span class="csv-meta">100 836 registros</span>
+      </button>
+
+      <div class="server-status" id="server-status">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Conectando…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════ MAIN ══════════════ -->
+  <main class="main">
+
+    <!-- ─────────── TAREA 1: KNN ─────────── -->
+    <section class="page active" id="page-t1">
+      <div class="section-header">
+        <div>
+          <div class="section-title-row">
+            <h1 class="section-title">Vecinos más cercanos</h1>
+            <span class="task-tag">Tarea 1</span>
+          </div>
+          <p class="section-desc">Algoritmo K-NN con métricas de similitud y distancia · <code>obtener_knn()</code></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Parámetros</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="t1-uid">Usuario ID</label>
+            <input type="number" id="t1-uid" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="t1-k">K vecinos</label>
+            <input type="number" id="t1-k" value="10" min="1" max="50">
+          </div>
+          <div class="form-group">
+            <label for="t1-metric">Métrica</label>
+            <select id="t1-metric">
+              <option value="coseno">Similitud Coseno</option>
+              <option value="euclidiana">Distancia Euclidiana</option>
+              <option value="manhattan">Distancia Manhattan</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btn-t1-run">
+            <span class="btn-icon">▶</span> Calcular K-NN
+          </button>
+        </div>
+      </div>
+
+      <div class="metrics hidden" id="t1-metrics">
+        <div class="metric">
+          <div class="metric-label">vecinos encontrados</div>
+          <div class="metric-val blue" id="t1-m-vecinos">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">mayor similitud</div>
+          <div class="metric-val green" id="t1-m-maxsim">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">películas usuario</div>
+          <div class="metric-val amber" id="t1-m-movs">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">tiempo (ms)</div>
+          <div class="metric-val" id="t1-m-time">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resultados K-NN</div>
+        <div id="t1-results">
+          <div class="empty">
+            <div class="empty-icon">◎</div>
+            Configura los parámetros y ejecuta el cálculo
+          </div>
+        </div>
+      </div>
+
+      <div class="card hidden" id="t1-chart-card">
+        <div class="card-title">Distribución de similitud / distancia</div>
+        <div class="chart-wrap">
+          <canvas id="t1-chart" role="img" aria-label="Similitud de vecinos KNN"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── TAREA 2: RECOMENDACIONES ─────────── -->
+    <section class="page" id="page-t2">
+      <div class="section-header">
+        <div>
+          <div class="section-title-row">
+            <h1 class="section-title">Motor de Recomendaciones</h1>
+            <span class="task-tag">Tarea 2</span>
+          </div>
+          <p class="section-desc">Filtrado colaborativo basado en vecinos · <code>recomendar()</code></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Parámetros</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="t2-uid">Usuario ID</label>
+            <input type="number" id="t2-uid" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="t2-k">K vecinos</label>
+            <input type="number" id="t2-k" value="10" min="1" max="50">
+          </div>
+          <div class="form-group">
+            <label for="t2-thresh">Umbral rating</label>
+            <input type="number" id="t2-thresh" value="3.0" min="0" max="5" step="0.5">
+          </div>
+          <div class="form-group">
+            <label for="t2-topn">Top N</label>
+            <input type="number" id="t2-topn" value="10" min="1" max="50">
+          </div>
+          <button class="btn btn-primary" id="btn-t2-run">
+            <span class="btn-icon">▶</span> Recomendar
+          </button>
+        </div>
+      </div>
+
+      <div class="metrics hidden" id="t2-metrics">
+        <div class="metric">
+          <div class="metric-label">candidatas</div>
+          <div class="metric-val blue" id="t2-m-cands">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">predicción máx</div>
+          <div class="metric-val green" id="t2-m-maxpred">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">predicción mín</div>
+          <div class="metric-val amber" id="t2-m-minpred">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">vecinos usados</div>
+          <div class="metric-val" id="t2-m-vecs">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Películas Recomendadas</div>
+        <div id="t2-results">
+          <div class="empty">
+            <div class="empty-icon">🎬</div>
+            Ejecuta el motor para ver recomendaciones
+          </div>
+        </div>
+      </div>
+
+      <div class="card hidden" id="t2-chart-card">
+        <div class="card-title">Distribución de predicciones por rango</div>
+        <div class="chart-wrap">
+          <canvas id="t2-chart" role="img" aria-label="Distribución de predicciones de ratings"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── TAREA 3: INFLUENCER & BATCH ─────────── -->
+    <section class="page" id="page-t3">
+      <div class="section-header">
+        <div>
+          <div class="section-title-row">
+            <h1 class="section-title">Influencer & Usuarios Batch</h1>
+            <span class="task-tag">Tarea 3</span>
+          </div>
+          <p class="section-desc">Usuarios sintéticos y perfil influencer · <code>crear_usuarios_batch()</code> · <code>crear_influencer()</code></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Crear Usuarios Batch</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="t3-cant">Cantidad</label>
+            <input type="number" id="t3-cant" value="5" min="1" max="50">
+          </div>
+          <div class="form-group">
+            <label for="t3-nrat">Ratings por usuario</label>
+            <input type="number" id="t3-nrat" value="20" min="1" max="200">
+          </div>
+          <button class="btn btn-green" id="btn-t3-batch">
+            <span class="btn-icon">＋</span> Crear Batch
+          </button>
+        </div>
+        <div id="t3-batch-out"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Crear Perfil Influencer</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="t3-iid">Influencer ID</label>
+            <input type="number" id="t3-iid" value="9999" min="1">
+          </div>
+          <div class="form-group">
+            <label for="t3-itop">Top N populares</label>
+            <input type="number" id="t3-itop" value="100" min="10" max="500">
+          </div>
+          <button class="btn btn-amber" id="btn-t3-inf">
+            ★ Crear Influencer
+          </button>
+        </div>
+        <div id="t3-inf-out"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Comparativa de Recomendaciones tras Influencer</div>
+        <div class="form-row" style="margin-bottom: 1rem;">
+          <div class="form-group">
+            <label for="t3-uid">Usuario objetivo</label>
+            <input type="number" id="t3-uid" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="t3-k">K</label>
+            <input type="number" id="t3-k" value="10" min="1" max="50">
+          </div>
+          <button class="btn btn-primary" id="btn-t3-cmp">
+            ⇄ Comparar
+          </button>
+        </div>
+        <div id="t3-compare-out">
+          <div class="empty">
+            <div class="empty-icon">⇄</div>
+            Primero crea un influencer, luego compara
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── TAREA 4: COMPLEJIDAD ─────────── -->
+    <section class="page" id="page-t4">
+      <div class="section-header">
+        <div>
+          <div class="section-title-row">
+            <h1 class="section-title">Complejidad & MAE</h1>
+            <span class="task-tag">Tarea 4</span>
+          </div>
+          <p class="section-desc">Rendimiento y precisión según tamaño del dataset · <code>ejecutar_experimento_completo()</code></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Configurar experimento</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="t4-uid">Usuario objetivo</label>
+            <input type="number" id="t4-uid" value="1" min="1">
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 200px;">
+            <label for="t4-cuts">Cortes de filas (separados por coma)</label>
+            <input type="text" id="t4-cuts" value="1000,5000,10000" style="width: 100%;" placeholder="ej: 1000,5000,10000">
+          </div>
+          <button class="btn btn-primary" id="btn-t4-run">
+            <span class="btn-icon">▶</span> Ejecutar
+          </button>
+        </div>
+        <p class="field-hint">El experimento usa el CSV activo. Valores mayores al total de registros se ajustan automáticamente.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tabla de Rendimiento</div>
+        <div id="t4-table">
+          <div class="empty">
+            <div class="empty-icon">⏱</div>
+            Ejecuta el experimento para ver los resultados
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid hidden" id="t4-charts-wrap">
+        <div class="card">
+          <div class="card-title">Tiempo de cálculo por métrica (seg)</div>
+          <div class="chart-legend" id="t4-legend-time"></div>
+          <div class="chart-wrap" style="height: 200px;">
+            <canvas id="t4-time-chart" role="img" aria-label="Tiempo de cálculo por registros y métrica"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">MAE por métrica</div>
+          <div class="chart-legend" id="t4-legend-mae"></div>
+          <div class="chart-wrap" style="height: 200px;">
+            <canvas id="t4-mae-chart" role="img" aria-label="Error absoluto medio por métrica"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── ANÁLISIS DATASET ─────────── -->
+    <section class="page" id="page-analysis">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">Análisis del Dataset</h1>
+          <p class="section-desc">Estadísticas descriptivas del CSV activo</p>
+        </div>
+        <button class="btn btn-secondary" id="btn-analysis-run">↺ Analizar</button>
+      </div>
+
+      <div class="card hidden" id="analysis-loading">
+        <div class="loading-row">
+          <div class="spinner"></div>
+          <span>Procesando dataset…</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="analysis-prog" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div id="analysis-out">
+        <div class="empty">
+          <div class="empty-icon">📊</div>
+          Haz clic en "Analizar" para procesar el dataset
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
